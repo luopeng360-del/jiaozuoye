@@ -347,30 +347,58 @@
         const inputBoxes = document.querySelectorAll('.input-box');
         const submitBtn = document.getElementById('submitBtn');
         const submitBtnContainer = document.getElementById('submitBtnContainer');
+        const spacer = document.querySelector('.spacer');
 
         let currentCode = '';
-        let originalViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        const baseSpacerHeight = 80;
 
         function getKeyboardHeight() {
             if (!window.visualViewport) {
                 return 0;
             }
-            const visualBottom = window.visualViewport.height + window.visualViewport.offsetTop;
-            return Math.max(0, Math.round(originalViewportHeight - visualBottom));
+
+            const visualViewport = window.visualViewport;
+            const rawKeyboardHeight = window.innerHeight - visualViewport.height - visualViewport.offsetTop;
+            const keyboardHeight = Math.max(0, Math.round(rawKeyboardHeight));
+
+            // 过滤地址栏等微小抖动，避免误判成键盘弹起
+            return keyboardHeight > 80 ? keyboardHeight : 0;
+        }
+
+        function ensureInputVisible() {
+            if (document.activeElement !== realInput) {
+                return;
+            }
+
+            const buttonTop = submitBtnContainer.getBoundingClientRect().top;
+            const inputBottom = inputWrapper.getBoundingClientRect().bottom;
+            const overlap = inputBottom + 12 - buttonTop;
+            if (overlap > 0) {
+                window.scrollBy(0, overlap);
+            }
         }
 
         function updateSubmitBtnContainer() {
             const keyboardHeight = getKeyboardHeight();
-            const shouldFloat = document.activeElement === realInput || keyboardHeight > 0;
+            const shouldFloat = window.visualViewport
+                ? keyboardHeight > 0
+                : document.activeElement === realInput;
 
             if (!shouldFloat) {
                 submitBtnContainer.classList.remove('fixed');
                 submitBtnContainer.style.bottom = '';
+                if (spacer) {
+                    spacer.style.height = `${baseSpacerHeight}px`;
+                }
                 return;
             }
 
             submitBtnContainer.classList.add('fixed');
             submitBtnContainer.style.bottom = `${keyboardHeight}px`;
+            if (spacer) {
+                spacer.style.height = `${baseSpacerHeight + submitBtnContainer.offsetHeight + 12}px`;
+            }
+            ensureInputVisible();
         }
 
         // 点击输入框区域，聚焦隐藏输入框
@@ -399,8 +427,8 @@
         // 监听焦点变化
         realInput.addEventListener('focus', () => {
             updateInputBoxStyle();
-            updateSubmitBtnContainer();
             setTimeout(updateSubmitBtnContainer, 120);
+            setTimeout(updateSubmitBtnContainer, 260);
         });
 
         realInput.addEventListener('blur', () => {
@@ -414,13 +442,7 @@
         // 监听视口变化（键盘升起/收起）
         if (window.visualViewport) {
             const visualViewport = window.visualViewport;
-            visualViewport.addEventListener('resize', () => {
-                const visualBottom = visualViewport.height + visualViewport.offsetTop;
-                if (visualBottom > originalViewportHeight * 0.98) {
-                    originalViewportHeight = visualBottom;
-                }
-                updateSubmitBtnContainer();
-            });
+            visualViewport.addEventListener('resize', updateSubmitBtnContainer);
             visualViewport.addEventListener('scroll', updateSubmitBtnContainer);
         }
 
