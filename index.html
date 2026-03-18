@@ -235,7 +235,7 @@
             width: 100%;
             padding: 16px 24px;
             background: #fff;
-            transition: transform 0.3s ease;
+            transition: bottom 0.25s ease, transform 0.25s ease;
         }
 
         .submit-btn-container.fixed {
@@ -351,10 +351,33 @@
         let currentCode = '';
         let originalViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 
+        function getKeyboardHeight() {
+            if (!window.visualViewport) {
+                return 0;
+            }
+            const visualBottom = window.visualViewport.height + window.visualViewport.offsetTop;
+            return Math.max(0, Math.round(originalViewportHeight - visualBottom));
+        }
+
+        function updateSubmitBtnContainer() {
+            const keyboardHeight = getKeyboardHeight();
+            const shouldFloat = document.activeElement === realInput || keyboardHeight > 0;
+
+            if (!shouldFloat) {
+                submitBtnContainer.classList.remove('fixed');
+                submitBtnContainer.style.bottom = '';
+                return;
+            }
+
+            submitBtnContainer.classList.add('fixed');
+            submitBtnContainer.style.bottom = `${keyboardHeight}px`;
+        }
+
         // 点击输入框区域，聚焦隐藏输入框
         inputWrapper.addEventListener('click', () => {
             realInput.focus();
             updateInputBoxStyle();
+            updateSubmitBtnContainer();
         });
 
         // 监听输入
@@ -376,32 +399,29 @@
         // 监听焦点变化
         realInput.addEventListener('focus', () => {
             updateInputBoxStyle();
-            submitBtnContainer.classList.add('fixed');
+            updateSubmitBtnContainer();
+            setTimeout(updateSubmitBtnContainer, 120);
         });
 
         realInput.addEventListener('blur', () => {
             inputBoxes.forEach(box => {
                 box.classList.remove('active');
             });
-            // 延迟移除fixed类，确保点击按钮有时间响应
-            setTimeout(() => {
-                submitBtnContainer.classList.remove('fixed');
-            }, 100);
+            // 等待键盘收起动画后再重算按钮位置
+            setTimeout(updateSubmitBtnContainer, 120);
         });
 
         // 监听视口变化（键盘升起/收起）
         if (window.visualViewport) {
-            window.visualViewport.addEventListener('resize', () => {
-                const currentHeight = window.visualViewport.height;
-                if (currentHeight < originalViewportHeight * 0.8) {
-                    // 键盘升起
-                    submitBtnContainer.classList.add('fixed');
-                    document.body.style.height = `${window.visualViewport.height}px`;
-                } else {
-                    // 键盘收起
-                    document.body.style.height = '';
+            const visualViewport = window.visualViewport;
+            visualViewport.addEventListener('resize', () => {
+                const visualBottom = visualViewport.height + visualViewport.offsetTop;
+                if (visualBottom > originalViewportHeight * 0.98) {
+                    originalViewportHeight = visualBottom;
                 }
+                updateSubmitBtnContainer();
             });
+            visualViewport.addEventListener('scroll', updateSubmitBtnContainer);
         }
 
         // 更新显示
@@ -447,6 +467,7 @@
         window.addEventListener('load', () => {
             setTimeout(() => {
                 realInput.focus();
+                updateSubmitBtnContainer();
             }, 500);
         });
     </script>
