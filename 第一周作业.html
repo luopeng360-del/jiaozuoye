@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>验证码输入</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #fff;
+        }
+
+        /* 氛围图区域 */
+        .banner {
+            width: 100%;
+            height: 250px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .banner::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 50%);
+            animation: pulse 4s ease-in-out infinite;
+        }
+
+        .banner::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 100px;
+            background: linear-gradient(to top, rgba(255,255,255,0.8), transparent);
+        }
+
+        .banner-content {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            color: #fff;
+        }
+
+        .banner-icon {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 16px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .banner-icon svg {
+            width: 40px;
+            height: 40px;
+            fill: #fff;
+        }
+
+        .banner-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .banner-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        /* 装饰圆圈 */
+        .deco-circle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.1);
+        }
+
+        .deco-circle-1 {
+            width: 150px;
+            height: 150px;
+            top: -30px;
+            right: -30px;
+        }
+
+        .deco-circle-2 {
+            width: 100px;
+            height: 100px;
+            bottom: 40px;
+            left: -20px;
+        }
+
+        .deco-circle-3 {
+            width: 60px;
+            height: 60px;
+            top: 50%;
+            right: 15%;
+            background: rgba(255,255,255,0.05);
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 0.5;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.3;
+            }
+        }
+
+        /* 内容区域 */
+        .content {
+            flex: 1;
+            padding: 32px 24px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .description {
+            font-size: 14px;
+            color: #999;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+
+        /* 输入框区域 */
+        .input-wrapper {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 40px;
+        }
+
+        .input-box {
+            width: 48px;
+            height: 56px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+            background-color: #fafafa;
+            transition: all 0.2s ease;
+        }
+
+        .input-box.active {
+            border-color: #667eea;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .input-box.filled {
+            border-color: #667eea;
+            background-color: #f0f3ff;
+        }
+
+        /* 隐藏的真实输入框 */
+        .hidden-input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* 确定按钮 */
+        .submit-btn {
+            width: 100%;
+            height: 52px;
+            border: none;
+            border-radius: 26px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: auto;
+        }
+
+        .submit-btn:disabled {
+            background-color: #e0e0e0;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        .submit-btn:not(:disabled) {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:not(:disabled):active {
+            transform: scale(0.98);
+            box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+        }
+
+        /* 键盘提示 */
+        .keyboard-hint {
+            text-align: center;
+            font-size: 12px;
+            color: #ccc;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 氛围图 -->
+        <div class="banner">
+            <div class="deco-circle deco-circle-1"></div>
+            <div class="deco-circle deco-circle-2"></div>
+            <div class="deco-circle deco-circle-3"></div>
+            <div class="banner-content">
+                <div class="banner-icon">
+                    <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                    </svg>
+                </div>
+                <div class="banner-title">安全验证</div>
+                <div class="banner-subtitle">请输入6位验证码完成验证</div>
+            </div>
+        </div>
+
+        <!-- 内容区域 -->
+        <div class="content">
+            <div class="title">输入验证码</div>
+            <div class="description">验证码已发送至您的手机，请输入6位数字验证码</div>
+
+            <!-- 隐藏的真实输入框 -->
+            <input type="tel" 
+                   class="hidden-input" 
+                   id="realInput" 
+                   maxlength="6" 
+                   pattern="[0-9]*"
+                   inputmode="numeric"
+                   autocomplete="one-time-code">
+
+            <!-- 显示的输入框 -->
+            <div class="input-wrapper" id="inputWrapper">
+                <div class="input-box" data-index="0"></div>
+                <div class="input-box" data-index="1"></div>
+                <div class="input-box" data-index="2"></div>
+                <div class="input-box" data-index="3"></div>
+                <div class="input-box" data-index="4"></div>
+                <div class="input-box" data-index="5"></div>
+            </div>
+
+            <!-- 确定按钮 -->
+            <button class="submit-btn" id="submitBtn" disabled>确定</button>
+
+            <div class="keyboard-hint">点击输入框调起键盘</div>
+        </div>
+    </div>
+
+    <script>
+        const realInput = document.getElementById('realInput');
+        const inputWrapper = document.getElementById('inputWrapper');
+        const inputBoxes = document.querySelectorAll('.input-box');
+        const submitBtn = document.getElementById('submitBtn');
+
+        let currentCode = '';
+
+        // 点击输入框区域，聚焦隐藏输入框
+        inputWrapper.addEventListener('click', () => {
+            realInput.focus();
+            updateInputBoxStyle();
+        });
+
+        // 监听输入
+        realInput.addEventListener('input', (e) => {
+            // 只允许数字
+            let value = e.target.value.replace(/\D/g, '');
+            
+            // 限制6位
+            if (value.length > 6) {
+                value = value.slice(0, 6);
+            }
+            
+            currentCode = value;
+            realInput.value = value;
+            updateDisplay();
+            updateButtonState();
+        });
+
+        // 监听焦点变化
+        realInput.addEventListener('focus', () => {
+            updateInputBoxStyle();
+        });
+
+        realInput.addEventListener('blur', () => {
+            inputBoxes.forEach(box => {
+                box.classList.remove('active');
+            });
+        });
+
+        // 更新显示
+        function updateDisplay() {
+            inputBoxes.forEach((box, index) => {
+                box.textContent = currentCode[index] || '';
+                
+                if (currentCode[index]) {
+                    box.classList.add('filled');
+                    box.classList.remove('active');
+                } else {
+                    box.classList.remove('filled');
+                }
+            });
+            updateInputBoxStyle();
+        }
+
+        // 更新输入框样式
+        function updateInputBoxStyle() {
+            const currentIndex = currentCode.length;
+            inputBoxes.forEach((box, index) => {
+                if (index === currentIndex && document.activeElement === realInput) {
+                    box.classList.add('active');
+                } else {
+                    box.classList.remove('active');
+                }
+            });
+        }
+
+        // 更新按钮状态
+        function updateButtonState() {
+            submitBtn.disabled = currentCode.length !== 6;
+        }
+
+        // 按钮点击事件
+        submitBtn.addEventListener('click', () => {
+            if (currentCode.length === 6) {
+                window.location.href = 'https://www.baidu.com';
+            }
+        });
+
+        // 页面加载时自动聚焦
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                realInput.focus();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

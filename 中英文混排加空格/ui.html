@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>盘古之白</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+      font-size: 13px;
+      color: #1a1a1a;
+      background: #fff;
+      padding: 16px;
+      user-select: none;
+    }
+
+    /* ── 头部 ── */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .logo {
+      width: 34px; height: 34px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; flex-shrink: 0;
+    }
+    .title-group h1 { font-size: 14px; font-weight: 600; }
+    .title-group p  { font-size: 11px; color: #999; margin-top: 2px; }
+
+    .divider { height: 1px; background: #f0f0f0; margin: 12px 0; }
+
+    /* ── 范围选择 ── */
+    .section-label {
+      font-size: 11px; font-weight: 600; color: #999;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;
+    }
+    .scope-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .scope-option {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 12px;
+      border: 1.5px solid #e8e8e8; border-radius: 8px;
+      cursor: pointer; background: #fafafa;
+      transition: border-color .15s, background .15s;
+    }
+    .scope-option:hover  { border-color: #6366f1; background: #f5f3ff; }
+    .scope-option.active { border-color: #6366f1; background: #f5f3ff; }
+    .scope-option input[type="radio"] { display: none; }
+    .radio-dot {
+      width: 15px; height: 15px;
+      border: 2px solid #ccc; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color .15s, background .15s;
+    }
+    .scope-option.active .radio-dot { border-color: #6366f1; background: #6366f1; }
+    .scope-option.active .radio-dot::after {
+      content: ''; width: 5px; height: 5px;
+      background: #fff; border-radius: 50%;
+    }
+    .scope-text { flex: 1; }
+    .scope-text strong { display: block; font-size: 13px; font-weight: 500; }
+    .scope-text span   { font-size: 11px; color: #aaa; }
+    .scope-icon { font-size: 16px; }
+
+    /* ── 预览 ── */
+    .preview-box {
+      background: #f8f8f8; border: 1px solid #ebebeb;
+      border-radius: 8px; padding: 10px 12px; margin-bottom: 14px;
+    }
+    .preview-label { font-size: 11px; color: #aaa; margin-bottom: 7px; }
+    .preview-row { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+    .preview-row:last-child { margin-bottom: 0; }
+    .preview-tag {
+      font-size: 10px; padding: 1px 5px; border-radius: 4px;
+      font-weight: 700; flex-shrink: 0; width: 28px; text-align: center;
+    }
+    .tag-before { background: #fee2e2; color: #dc2626; }
+    .tag-after  { background: #dcfce7; color: #16a34a; }
+    .preview-text { font-size: 12px; color: #555; font-family: monospace; }
+    .arrow { color: #bbb; font-size: 11px; padding-left: 2px; }
+
+    /* ── 按钮 ── */
+    .btn-run {
+      width: 100%; padding: 10px;
+      background: linear-gradient(135deg, #6366f1, #8b5cf6);
+      color: #fff; border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      transition: opacity .15s, transform .1s;
+      letter-spacing: .3px;
+    }
+    .btn-run:hover:not(:disabled) { opacity: .88; }
+    .btn-run:active:not(:disabled) { transform: scale(.98); }
+    .btn-run:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── 进度 ── */
+    .progress-area { display: none; margin-top: 12px; }
+    .progress-area.visible { display: block; }
+    .progress-bar-wrap {
+      background: #efefef; border-radius: 100px;
+      height: 5px; overflow: hidden; margin-bottom: 5px;
+    }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #8b5cf6);
+      border-radius: 100px; width: 0%;
+      transition: width .2s ease;
+    }
+    .progress-text { font-size: 11px; color: #aaa; text-align: center; }
+
+    /* ── 结果 ── */
+    .result-area {
+      display: none; margin-top: 10px;
+      padding: 9px 12px; border-radius: 8px;
+      font-size: 12px; line-height: 1.5;
+    }
+    .result-area.success { display: block; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; }
+    .result-area.warning { display: block; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="logo">⬜</div>
+    <div class="title-group">
+      <h1>盘古之白</h1>
+      <p>中英文边界自动添加字号 ⅙ 的间距</p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="section-label">处理范围</div>
+  <div class="scope-group">
+    <label class="scope-option" id="opt-selection">
+      <input type="radio" name="scope" value="selection" />
+      <div class="radio-dot"></div>
+      <div class="scope-text">
+        <strong>当前选中</strong>
+        <span>仅处理已选中的图层</span>
+      </div>
+      <span class="scope-icon">🎯</span>
+    </label>
+    <label class="scope-option active" id="opt-page">
+      <input type="radio" name="scope" value="page" checked />
+      <div class="radio-dot"></div>
+      <div class="scope-text">
+        <strong>当前页面</strong>
+        <span>处理当前页面所有文本</span>
+      </div>
+      <span class="scope-icon">📄</span>
+    </label>
+    <label class="scope-option" id="opt-all">
+      <input type="radio" name="scope" value="all" />
+      <div class="radio-dot"></div>
+      <div class="scope-text">
+        <strong>全部页面</strong>
+        <span>处理文件中所有页面</span>
+      </div>
+      <span class="scope-icon">📑</span>
+    </label>
+  </div>
+
+  <div class="preview-box">
+    <div class="preview-label">处理方式</div>
+    <div class="preview-row" style="align-items:flex-start; gap:6px;">
+      <span class="preview-tag tag-after" style="margin-top:2px;">✓</span>
+      <span class="preview-text" style="line-height:1.6;">在中文与英文/数字的<strong>边界字符</strong>上设置<br>letterSpacing = 字号 ÷ 6（PIXELS）</span>
+    </div>
+    <div class="preview-row" style="margin-top:6px; align-items:flex-start; gap:6px;">
+      <span class="preview-tag tag-before" style="margin-top:2px;">✗</span>
+      <span class="preview-text" style="line-height:1.6; color:#aaa;">不插入空格字符，不改变文字内容</span>
+    </div>
+  </div>
+
+  <button class="btn-run" id="btn-run">✨ 开始处理</button>
+
+  <div class="progress-area" id="progress-area">
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+    <div class="progress-text" id="progress-text">正在处理...</div>
+  </div>
+
+  <div class="result-area" id="result-area"></div>
+
+  <script>
+    // 范围选择交互
+    var options = document.querySelectorAll('.scope-option');
+    for (var i = 0; i < options.length; i++) {
+      (function(opt) {
+        opt.addEventListener('click', function() {
+          for (var j = 0; j < options.length; j++) options[j].classList.remove('active');
+          opt.classList.add('active');
+          opt.querySelector('input[type="radio"]').checked = true;
+        });
+      })(options[i]);
+    }
+
+    function getScope() {
+      var checked = document.querySelector('input[name="scope"]:checked');
+      return checked ? checked.value : 'page';
+    }
+
+    var btnRun      = document.getElementById('btn-run');
+    var progressArea = document.getElementById('progress-area');
+    var progressBar  = document.getElementById('progress-bar');
+    var progressText = document.getElementById('progress-text');
+    var resultArea   = document.getElementById('result-area');
+
+    btnRun.addEventListener('click', function() {
+      var scope = getScope();
+      btnRun.disabled = true;
+      btnRun.textContent = '处理中...';
+      progressArea.classList.add('visible');
+      progressBar.style.width = '0%';
+      progressText.textContent = '正在扫描文本图层...';
+      resultArea.className = 'result-area';
+      resultArea.textContent = '';
+
+      // 向主线程发消息（MasterGo 格式）
+      parent.postMessage({ type: 'run', scope: scope }, '*');
+    });
+
+    // 接收主线程消息
+    window.onmessage = function(event) {
+      // MasterGo 消息直接在 event.data 里
+      var msg = event.data;
+      if (!msg || !msg.type) return;
+
+      if (msg.type === 'progress') {
+        var pct = Math.round((msg.current / msg.total) * 100);
+        progressBar.style.width = pct + '%';
+        progressText.textContent = '正在处理 ' + msg.current + ' / ' + msg.total;
+
+      } else if (msg.type === 'done') {
+        btnRun.disabled = false;
+        btnRun.textContent = '✨ 开始处理';
+        progressBar.style.width = '100%';
+
+        if (msg.count > 0) {
+          resultArea.className = 'result-area success';
+          resultArea.textContent = '✅ ' + msg.message;
+        } else {
+          resultArea.className = 'result-area warning';
+          resultArea.textContent = 'ℹ️ ' + msg.message;
+        }
+
+        setTimeout(function() {
+          progressArea.classList.remove('visible');
+        }, 1000);
+      }
+    };
+  </script>
+</body>
+</html>

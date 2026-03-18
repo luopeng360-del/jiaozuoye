@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>WCAG 无障碍检测</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --error:   #ef4444;
+      --warning: #f59e0b;
+      --info:    #6366f1;
+      --pass:    #22c55e;
+      --bg:      #ffffff;
+      --bg2:     #f8f8f8;
+      --border:  #ebebeb;
+      --text:    #1a1a1a;
+      --muted:   #999;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+      font-size: 13px;
+      color: var(--text);
+      background: var(--bg);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── 顶部 ── */
+    .header {
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .logo {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .title-group h1 { font-size: 14px; font-weight: 600; }
+    .title-group p  { font-size: 11px; color: var(--muted); margin-top: 1px; }
+
+    /* 范围选择 */
+    .scope-row {
+      display: flex;
+      gap: 6px;
+    }
+    .scope-btn {
+      flex: 1;
+      padding: 6px 4px;
+      border: 1.5px solid var(--border);
+      border-radius: 6px;
+      background: var(--bg2);
+      font-size: 11px;
+      color: #555;
+      cursor: pointer;
+      text-align: center;
+      transition: all .15s;
+    }
+    .scope-btn:hover  { border-color: #6366f1; color: #6366f1; }
+    .scope-btn.active { border-color: #6366f1; background: #f0f0ff; color: #6366f1; font-weight: 600; }
+
+    /* 运行按钮 */
+    .run-row {
+      margin-top: 10px;
+    }
+    .btn-run {
+      width: 100%;
+      padding: 9px;
+      background: linear-gradient(135deg, #6366f1, #06b6d4);
+      color: #fff;
+      border: none; border-radius: 7px;
+      font-size: 13px; font-weight: 600;
+      cursor: pointer;
+      transition: opacity .15s, transform .1s;
+    }
+    .btn-run:hover:not(:disabled) { opacity: .88; }
+    .btn-run:active:not(:disabled) { transform: scale(.98); }
+    .btn-run:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* ── 统计栏 ── */
+    .stats-bar {
+      display: none;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .stats-bar.visible { display: flex; gap: 8px; align-items: center; }
+    .stat-item {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 12px;
+    }
+    .stat-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .stat-dot.error   { background: var(--error); }
+    .stat-dot.warning { background: var(--warning); }
+    .stat-dot.info    { background: var(--info); }
+    .stat-dot.pass    { background: var(--pass); }
+    .stat-sep { color: var(--border); margin: 0 2px; }
+    .stat-total { margin-left: auto; font-size: 11px; color: var(--muted); }
+
+    /* 过滤器 */
+    .filter-row {
+      display: none;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .filter-row.visible { display: flex; }
+    .filter-chip {
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: all .15s;
+      font-weight: 500;
+    }
+    .filter-chip.all    { background: #f0f0f0; color: #555; border-color: #ddd; }
+    .filter-chip.error  { background: #fef2f2; color: var(--error);   border-color: #fecaca; }
+    .filter-chip.warning{ background: #fffbeb; color: var(--warning); border-color: #fde68a; }
+    .filter-chip.info   { background: #eef2ff; color: var(--info);    border-color: #c7d2fe; }
+    .filter-chip.active { box-shadow: 0 0 0 2px currentColor; }
+
+    /* ── 结果列表 ── */
+    .results-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    /* 空状态 */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      gap: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+    .empty-icon { font-size: 36px; }
+    .empty-title { font-size: 13px; font-weight: 600; color: #555; }
+    .empty-desc  { font-size: 11px; line-height: 1.6; }
+
+    /* 通过状态 */
+    .pass-state {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 8px;
+      padding: 20px;
+      text-align: center;
+    }
+    .pass-state.visible { display: flex; }
+    .pass-icon  { font-size: 40px; }
+    .pass-title { font-size: 14px; font-weight: 700; color: var(--pass); }
+    .pass-desc  { font-size: 11px; color: var(--muted); line-height: 1.6; }
+
+    /* 分组标题 */
+    .group-header {
+      padding: 6px 16px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    /* 问题卡片 */
+    .issue-card {
+      margin: 0 10px 6px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+      cursor: pointer;
+      transition: box-shadow .15s;
+    }
+    .issue-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+
+    .issue-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 9px 12px;
+      background: var(--bg2);
+    }
+    .issue-badge {
+      width: 6px; height: 6px;
+      border-radius: 50%; flex-shrink: 0;
+    }
+    .issue-badge.error   { background: var(--error); }
+    .issue-badge.warning { background: var(--warning); }
+    .issue-badge.info    { background: var(--info); }
+
+    .issue-rule {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+    .issue-rule.error   { background: #fef2f2; color: var(--error); }
+    .issue-rule.warning { background: #fffbeb; color: var(--warning); }
+    .issue-rule.info    { background: #eef2ff; color: var(--info); }
+
+    .issue-name {
+      font-size: 12px;
+      font-weight: 500;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .issue-locate {
+      font-size: 11px;
+      color: #6366f1;
+      flex-shrink: 0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid #c7d2fe;
+      background: #eef2ff;
+    }
+    .issue-locate:hover { background: #e0e7ff; }
+
+    .issue-body {
+      padding: 8px 12px 10px;
+    }
+    .issue-desc {
+      font-size: 12px;
+      color: #444;
+      line-height: 1.5;
+      margin-bottom: 5px;
+    }
+    .issue-suggestion {
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    /* 对比度色块 */
+    .contrast-preview {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 7px;
+    }
+    .color-swatch {
+      width: 20px; height: 20px;
+      border-radius: 4px;
+      border: 1px solid rgba(0,0,0,.1);
+      flex-shrink: 0;
+    }
+    .contrast-ratio {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 7px;
+      border-radius: 4px;
+    }
+    .contrast-ratio.fail { background: #fef2f2; color: var(--error); }
+    .contrast-ratio.aa   { background: #fffbeb; color: var(--warning); }
+    .contrast-ratio.aaa  { background: #f0fdf4; color: var(--pass); }
+    .contrast-label { font-size: 10px; color: var(--muted); }
+
+    /* 滚动条 */
+    .results-area::-webkit-scrollbar { width: 4px; }
+    .results-area::-webkit-scrollbar-track { background: transparent; }
+    .results-area::-webkit-scrollbar-thumb { background: #ddd; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <div class="header-top">
+      <div class="logo">♿</div>
+      <div class="title-group">
+        <h1>WCAG 无障碍检测</h1>
+        <p>基于 WCAG 2.1 标准检测设计稿</p>
+      </div>
+    </div>
+
+    <div class="scope-row">
+      <button class="scope-btn" data-scope="selection">当前选中</button>
+      <button class="scope-btn active" data-scope="page">当前页面</button>
+      <button class="scope-btn" data-scope="all">全部页面</button>
+    </div>
+
+    <div class="run-row">
+      <button class="btn-run" id="btn-run">🔍 开始检测</button>
+    </div>
+  </div>
+
+  <!-- 统计栏 -->
+  <div class="stats-bar" id="stats-bar">
+    <div class="stat-item">
+      <div class="stat-dot error"></div>
+      <span id="count-error">0</span> 错误
+    </div>
+    <div class="stat-sep">·</div>
+    <div class="stat-item">
+      <div class="stat-dot warning"></div>
+      <span id="count-warning">0</span> 警告
+    </div>
+    <div class="stat-sep">·</div>
+    <div class="stat-item">
+      <div class="stat-dot info"></div>
+      <span id="count-info">0</span> 建议
+    </div>
+    <div class="stat-total" id="stat-total"></div>
+  </div>
+
+  <!-- 过滤器 -->
+  <div class="filter-row" id="filter-row">
+    <button class="filter-chip all active" data-filter="all">全部</button>
+    <button class="filter-chip error"   data-filter="error">错误</button>
+    <button class="filter-chip warning" data-filter="warning">警告</button>
+    <button class="filter-chip info"    data-filter="info">建议</button>
+  </div>
+
+  <!-- 结果区域 -->
+  <div class="results-area" id="results-area">
+    <div class="empty-state" id="empty-state">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">点击「开始检测」</div>
+      <div class="empty-desc">
+        将检测以下 WCAG 2.1 规则：<br>
+        色彩对比度 · 文字大小 · 可点击区域<br>
+        图层命名 · 图片描述
+      </div>
+    </div>
+    <div class="pass-state" id="pass-state">
+      <div class="pass-icon">✅</div>
+      <div class="pass-title">全部通过！</div>
+      <div class="pass-desc">未发现无障碍问题，<br>设计稿符合 WCAG 2.1 标准。</div>
+    </div>
+    <div id="issue-list"></div>
+  </div>
+
+  <script>
+    var currentScope = 'page';
+    var allIssues = [];
+    var currentFilter = 'all';
+
+    // 范围选择
+    var scopeBtns = document.querySelectorAll('.scope-btn');
+    for (var i = 0; i < scopeBtns.length; i++) {
+      (function(btn) {
+        btn.addEventListener('click', function() {
+          for (var j = 0; j < scopeBtns.length; j++) scopeBtns[j].classList.remove('active');
+          btn.classList.add('active');
+          currentScope = btn.dataset.scope;
+        });
+      })(scopeBtns[i]);
+    }
+
+    // 过滤器
+    var filterChips = document.querySelectorAll('.filter-chip');
+    for (var k = 0; k < filterChips.length; k++) {
+      (function(chip) {
+        chip.addEventListener('click', function() {
+          for (var m = 0; m < filterChips.length; m++) filterChips[m].classList.remove('active');
+          chip.classList.add('active');
+          currentFilter = chip.dataset.filter;
+          renderIssues(allIssues);
+        });
+      })(filterChips[k]);
+    }
+
+    // 运行检测
+    document.getElementById('btn-run').addEventListener('click', function() {
+      var btn = document.getElementById('btn-run');
+      btn.disabled = true;
+      btn.textContent = '检测中...';
+      document.getElementById('empty-state').style.display = 'none';
+      document.getElementById('pass-state').classList.remove('visible');
+      document.getElementById('issue-list').innerHTML = '';
+      parent.postMessage({ type: 'run', scope: currentScope }, '*');
+    });
+
+    // 接收结果
+    window.onmessage = function(event) {
+      var msg = event.data;
+      if (!msg || !msg.type) return;
+
+      if (msg.type === 'result') {
+        var btn = document.getElementById('btn-run');
+        btn.disabled = false;
+        btn.textContent = '🔍 开始检测';
+
+        allIssues = msg.issues || [];
+        renderStats(allIssues);
+        renderIssues(allIssues);
+      }
+    };
+
+    function renderStats(issues) {
+      var errors   = issues.filter(function(i) { return i.level === 'error'; }).length;
+      var warnings = issues.filter(function(i) { return i.level === 'warning'; }).length;
+      var infos    = issues.filter(function(i) { return i.level === 'info'; }).length;
+
+      document.getElementById('count-error').textContent   = errors;
+      document.getElementById('count-warning').textContent = warnings;
+      document.getElementById('count-info').textContent    = infos;
+      document.getElementById('stat-total').textContent    = '共 ' + issues.length + ' 项';
+
+      document.getElementById('stats-bar').classList.add('visible');
+      document.getElementById('filter-row').classList.add('visible');
+    }
+
+    function renderIssues(issues) {
+      var list = document.getElementById('issue-list');
+      var emptyState = document.getElementById('empty-state');
+      var passState  = document.getElementById('pass-state');
+
+      // 过滤
+      var filtered = issues;
+      if (currentFilter !== 'all') {
+        filtered = issues.filter(function(i) { return i.level === currentFilter; });
+      }
+
+      emptyState.style.display = 'none';
+
+      if (issues.length === 0) {
+        passState.classList.add('visible');
+        list.innerHTML = '';
+        return;
+      }
+
+      passState.classList.remove('visible');
+
+      if (filtered.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:30px;color:#aaa;font-size:12px;">该分类下无问题</div>';
+        return;
+      }
+
+      // 按规则分组
+      var groups = {};
+      var groupOrder = [];
+      for (var i = 0; i < filtered.length; i++) {
+        var issue = filtered[i];
+        var key = issue.ruleLabel;
+        if (!groups[key]) {
+          groups[key] = [];
+          groupOrder.push(key);
+        }
+        groups[key].push(issue);
+      }
+
+      var html = '';
+      for (var g = 0; g < groupOrder.length; g++) {
+        var groupName = groupOrder[g];
+        var groupIssues = groups[groupName];
+        html += '<div class="group-header">' + groupName + ' (' + groupIssues.length + ')</div>';
+        for (var j = 0; j < groupIssues.length; j++) {
+          html += renderIssueCard(groupIssues[j]);
+        }
+      }
+
+      list.innerHTML = html;
+
+      // 绑定定位按钮事件
+      var locateBtns = list.querySelectorAll('.issue-locate');
+      for (var b = 0; b < locateBtns.length; b++) {
+        (function(btn) {
+          btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            parent.postMessage({ type: 'select', nodeId: btn.dataset.nodeId }, '*');
+          });
+        })(locateBtns[b]);
+      }
+    }
+
+    function renderIssueCard(issue) {
+      var levelLabel = { error: '错误', warning: '警告', info: '建议' }[issue.level] || issue.level;
+
+      var extraHtml = '';
+      // 对比度色块
+      if (issue.rule === 'contrast' && issue.detail) {
+        var d = issue.detail;
+        var ratioClass = d.ratio >= 7 ? 'aaa' : (d.ratio >= 4.5 ? 'aa' : 'fail');
+        var ratioLabel = d.ratio >= 7 ? 'AAA' : (d.ratio >= 4.5 ? 'AA' : 'Fail');
+        extraHtml = '<div class="contrast-preview">' +
+          '<div class="color-swatch" style="background:' + d.fg + '"></div>' +
+          '<span style="font-size:10px;color:#aaa;">on</span>' +
+          '<div class="color-swatch" style="background:' + d.bg + '"></div>' +
+          '<span class="contrast-ratio ' + ratioClass + '">' + d.ratio + ':1 · ' + ratioLabel + '</span>' +
+          '<span class="contrast-label">' + (d.isLargeText ? '大文字' : '正文') + ' · ' + d.fontSize + 'px</span>' +
+          '</div>';
+      }
+
+      return '<div class="issue-card">' +
+        '<div class="issue-header">' +
+          '<div class="issue-badge ' + issue.level + '"></div>' +
+          '<span class="issue-rule ' + issue.level + '">' + levelLabel + '</span>' +
+          '<span class="issue-name" title="' + escHtml(issue.nodeName) + '">' + escHtml(issue.nodeName) + '</span>' +
+          '<button class="issue-locate" data-node-id="' + issue.nodeId + '">定位</button>' +
+        '</div>' +
+        '<div class="issue-body">' +
+          '<div class="issue-desc">' + escHtml(issue.desc) + '</div>' +
+          '<div class="issue-suggestion">💡 ' + escHtml(issue.suggestion) + '</div>' +
+          extraHtml +
+        '</div>' +
+        '</div>';
+    }
+
+    function escHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>
