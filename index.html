@@ -200,6 +200,23 @@
             pointer-events: none;
         }
 
+        /* 确定按钮容器 */
+        .submit-btn-container {
+            width: 100%;
+            padding: 16px 24px;
+            background: #fff;
+            transition: transform 0.3s ease;
+        }
+
+        .submit-btn-container.fixed {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+        }
+
         /* 确定按钮 */
         .submit-btn {
             width: 100%;
@@ -210,7 +227,6 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            margin-top: auto;
         }
 
         .submit-btn:disabled {
@@ -235,7 +251,11 @@
             text-align: center;
             font-size: 12px;
             color: #ccc;
-            margin-top: 16px;
+            margin-top: 12px;
+        }
+
+        .spacer {
+            height: 80px;
         }
     </style>
 </head>
@@ -281,10 +301,14 @@
                 <div class="input-box" data-index="5"></div>
             </div>
 
-            <!-- 确定按钮 -->
-            <button class="submit-btn" id="submitBtn" disabled>确定</button>
+            <div class="spacer"></div>
+        </div>
 
+        <!-- 确定按钮容器 - 键盘升起时固定在键盘上方 -->
+        <div class="submit-btn-container" id="submitBtnContainer">
+            <button class="submit-btn" id="submitBtn" disabled>确定</button>
             <div class="keyboard-hint">点击输入框调起键盘</div>
+        </div>
         </div>
     </div>
 
@@ -293,8 +317,10 @@
         const inputWrapper = document.getElementById('inputWrapper');
         const inputBoxes = document.querySelectorAll('.input-box');
         const submitBtn = document.getElementById('submitBtn');
+        const submitBtnContainer = document.getElementById('submitBtnContainer');
 
         let currentCode = '';
+        let originalViewportHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 
         // 点击输入框区域，聚焦隐藏输入框
         inputWrapper.addEventListener('click', () => {
@@ -321,13 +347,33 @@
         // 监听焦点变化
         realInput.addEventListener('focus', () => {
             updateInputBoxStyle();
+            submitBtnContainer.classList.add('fixed');
         });
 
         realInput.addEventListener('blur', () => {
             inputBoxes.forEach(box => {
                 box.classList.remove('active');
             });
+            // 延迟移除fixed类，确保点击按钮有时间响应
+            setTimeout(() => {
+                submitBtnContainer.classList.remove('fixed');
+            }, 100);
         });
+
+        // 监听视口变化（键盘升起/收起）
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', () => {
+                const currentHeight = window.visualViewport.height;
+                if (currentHeight < originalViewportHeight * 0.8) {
+                    // 键盘升起
+                    submitBtnContainer.classList.add('fixed');
+                    document.body.style.height = `${window.visualViewport.height}px`;
+                } else {
+                    // 键盘收起
+                    document.body.style.height = '';
+                }
+            });
+        }
 
         // 更新显示
         function updateDisplay() {
